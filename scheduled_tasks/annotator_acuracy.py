@@ -1,12 +1,12 @@
-# label_log_analysis.py
-
 from encord import EncordUserClient
 import datetime
 import pandas as pd
+from datetime import date
 
 # Constants
-SSH_PATH = "../secrets/encord-alejandra-accelerate-private-key.ed25519"
-PROJECT_ID = "85317f8b-dc97-4866-9bdd-2ccc0dc9285f"  # Yutori [TEST]
+SSH_PATH = "secrets/encord-alejandra-accelerate-private-key.ed25519"
+# PROJECT_ID = "85317f8b-dc97-4866-9bdd-2ccc0dc9285f"  # Yutori [TEST]
+PROJECT_ID = "fb5c3af6-f023-4f70-87da-29bc7d4ac658"  # Yutori - Aug 11 Delivery
 
 # Log actions reference:
 # 3: Start labeling
@@ -37,76 +37,73 @@ class LabelLog:
     def to_dict(self):
         return self.__dict__
 
-def main():
-    # Initialize client
-    user_client = EncordUserClient.create_with_ssh_private_key(
-        ssh_private_key_path=SSH_PATH
-    )
+# Initialize client
+user_client = EncordUserClient.create_with_ssh_private_key(
+    ssh_private_key_path=SSH_PATH
+)
 
-    project = user_client.get_project(PROJECT_ID)
+project = user_client.get_project(PROJECT_ID)
 
-    # Fetch label logs from the last week
-    label_logs = project.get_label_logs(
-        after=datetime.datetime.now() - datetime.timedelta(weeks=1)
-    )
+# Fetch label logs from the last week
+label_logs = project.get_label_logs(
+    after=datetime.datetime.now() - datetime.timedelta(weeks=1)
+)
 
-    # Convert logs to DataFrame
-    log_objects = [LabelLog(log_line) for log_line in label_logs]
-    all_labels = pd.DataFrame([log.to_dict() for log in log_objects])
+# Convert logs to DataFrame
+log_objects = [LabelLog(log_line) for log_line in label_logs]
+all_labels = pd.DataFrame([log.to_dict() for log in log_objects])
 
-    # Filter logs by action type
-    rejections = all_labels[all_labels['action'] == 13]
-    submissions = all_labels[all_labels['action'] == 28]
+# Filter logs by action type
+rejections = all_labels[all_labels['action'] == 13]
+submissions = all_labels[all_labels['action'] == 28]
 
-    # Count submissions per user and task type
-    submitted_counts = (
-        submissions
-        .groupby(['user_email', 'label_name'])
-        .size()
-        .reset_index(name='submitted')
-    )
+# Count submissions per user and task type
+submitted_counts = (
+    submissions
+    .groupby(['user_email', 'label_name'])
+    .size()
+    .reset_index(name='submitted')
+)
 
-    # Match rejections with corresponding submissions
-    merged = pd.merge(
-        rejections,
-        submissions,
-        on='identifier',
-        suffixes=('_rejection', '_submission')
-    )
+# Match rejections with corresponding submissions
+merged = pd.merge(
+    rejections,
+    submissions,
+    on='identifier',
+    suffixes=('_rejection', '_submission')
+)
 
-    # Keep only submissions before the rejection
-    merged_timed = merged[merged['created_at_submission'] < merged['created_at_rejection']]
+# Keep only submissions before the rejection
+merged_timed = merged[merged['created_at_submission'] < merged['created_at_rejection']]
 
-    # Get latest submission before each rejection
-    merged_timed_ordered = (
-        merged_timed
-        .sort_values('created_at_submission')
-        .groupby(['identifier', 'created_at_rejection'])
-        .tail(1)
-    )
+# Get latest submission before each rejection
+merged_timed_ordered = (
+    merged_timed
+    .sort_values('created_at_submission')
+    .groupby(['identifier', 'created_at_rejection'])
+    .tail(1)
+)
 
-    # Count rejections per user and task type
-    rejected_counts = (
-        merged_timed_ordered
-        .groupby(['user_email_submission', 'label_name_submission'])
-        .size()
-        .reset_index(name='rejected')
-        .rename(columns={
-            'user_email_submission': 'user_email',
-            'label_name_submission': 'label_name'
-        })
-    )
+# Count rejections per user and task type
+rejected_counts = (
+    merged_timed_ordered
+    .groupby(['user_email_submission', 'label_name_submission'])
+    .size()
+    .reset_index(name='rejected')
+    .rename(columns={
+        'user_email_submission': 'user_email',
+        'label_name_submission': 'label_name'
+    })
+)
 
-    # Merge with submission counts and calculate rejection rates
-    stats = pd.merge(submitted_counts, rejected_counts, on=['user_email', 'label_name'], how='left')
-    stats['rejected'] = stats['rejected'].fillna(0)
-    stats['rejection_rate'] = stats['rejected'] / stats['submitted']
+# Merge with submission counts and calculate rejection rates
+stats = pd.merge(submitted_counts, rejected_counts, on=['user_email', 'label_name'], how='left')
+stats['rejected'] = stats['rejected'].fillna(0)
+stats['rejection_rate'] = stats['rejected'] / stats['submitted']
 
-    # Pivot result to have rejection rates per annotator and task type
-    result = stats.pivot(index='user_email', columns='label_name', values='rejection_rate')
+# Pivot result to have rejection rates per annotator and task type
+result = stats.pivot(index='user_email', columns='label_name', values='rejection_rate')
 
-    # Output result
-    print(result)
-
-if __name__ == "__main__":
-    main()
+today = date.today().isoformat()  # Format: YYYY-MM-DD
+filename = f"annotator_accuracy_{today}.csv"
+result.to_csv(filename)
