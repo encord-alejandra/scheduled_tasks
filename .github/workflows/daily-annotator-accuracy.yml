@@ -21,6 +21,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Decode and write SSH private key
+        run: |
+          mkdir -p secrets
+          echo "${{ secrets.ENCORD_PRIVATE_KEY_B64 }}" | base64 -d > secrets/encord-alejandra-accelerate-private-key.ed25519
+          chmod 600 secrets/encord-alejandra-accelerate-private-key.ed25519
+
       - name: Run script
         run: python scheduled_tasks/annotator_acuracy.py
 
