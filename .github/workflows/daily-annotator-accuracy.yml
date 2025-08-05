@@ -1,0 +1,41 @@
+name: Daily Annotator Report
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Run script
+        run: python scheduled_tasks/annotator_acuracy.py
+
+      - name: Send email with CSV
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "Daily Annotator Report - ${{ github.run_number }}"
+          body: |
+            Hi team,
+
+            Please find today's annotator accuracy report attached.
+
+            Best regards,
+            Automated Reporting System
+          to: ${{ secrets.REPORT_EMAIL }}
+          from: ${{ secrets.FROM_EMAIL }}
+          attachments: "*.csv"
