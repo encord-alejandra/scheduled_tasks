@@ -1,0 +1,15 @@
+output/
+billing_tool/__pycache__
+logs/
+secrets/
+input
+.venv/
+__pycache__/
+.idea
+.env
+.DS_Store
+PyCharmMiscProject.iml
+yutori/
+scripts
+billing
+
