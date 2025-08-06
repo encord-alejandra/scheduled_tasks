@@ -13,6 +13,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set current date
+        run: echo "CURRENT_DAY=$(date '+%A, %d %B %Y')" >> $GITHUB_ENV
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -37,7 +40,7 @@ jobs:
           server_port: 465
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "Daily Annotator Report - ${{ github.run_number }}"
+          subject: "Annotator Accuracy Report - ${{ env.CURRENT_DAY }}"
           body: |
             Hi team,
 
@@ -45,7 +48,7 @@ jobs:
             The statistics reflect all-time annotation performance for the project Yutori - Aug 11 Delivery "fb5c3af6-f023-4f70-87da-29bc7d4ac658"
             
             Accuracy is calculated as: 
-            Accuracy = # rejections / ( # approvals + # rejections )
+            Accuracy = # approvals / ( # approvals + # rejections )
 
             Best regards,
             Alejandra 

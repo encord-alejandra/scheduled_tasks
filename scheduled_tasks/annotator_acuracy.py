@@ -39,6 +39,32 @@ class LabelLog:
     def to_dict(self):
         return self.__dict__
 
+# Column order for the output file
+labels = [
+    "Task Status",
+    "1. UI Grounding: incorrect mouse action compared to model's intended action",
+    "2. Incorrect / Missed Use of UI Element: not finding or using key features (e.g. filters, search)",
+    "3. Missed Opportunity to Extract Info: did not call “read_texts_and_links tool” leading to missing key information",
+    "4. Early Stopping (Premature Task Satisfaction): assuming task is done even when task not complete (Default)",
+    "5. Early Stopping (Insufficient Persistence): acknowledging task is not done and giving up too easily",
+    "6. Looping Over Failed Actions: repeats 3+ times the same failed or wrong action when alternative actions exist",
+    "7. Unreasonable Step: taking an action that does not progress the task",
+    "8. Dynamic Events: failed to remove pop-ups or visual blocker that interfere with progress",
+    '9. Prompt Misunderstanding: before beginning task, misunderstands prompt or neglects key requirements',
+    "10. Thought Verification Error: model does not acknowledge or notice error in previous step",
+    "11. Information / Text Hallucination: hallucinates incorrect text information",
+    "12. UI / Visual Hallucination: hallucinates UI elements that don’t exist or misinterprets visual information",
+    "13. Time Misunderstanding: misunderstands current date or makes datetime calculation mistake",
+    '14. Summarization Failure: "stop" action was called but the model did not summarize its progress',
+    "15. Dissatisfactory Output",
+    '16. Run Crash: blank step or "stop" action abruptly breaking task execution',
+    "17. Bot Detection: website blocked due to bot/captcha/proxy issues",
+    "18. Authentication Issue: website blocked if not logged in",
+    "19. Tool Error: Website returns incorrect / outdated info or broken / wrong / generic links",
+    "Bad Prompt",
+    "Task Status Explanation"
+]
+
 # Fetch label logs
 user_client = EncordUserClient.create_with_ssh_private_key(ssh_private_key_path=SSH_PATH)
 project = user_client.get_project(PROJECT_ID)
@@ -67,14 +93,26 @@ review_outcome = df.groupby(['annotator', 'label_name', 'action']).size().unstac
 review_outcome[12] = review_outcome.get(12, 0)
 review_outcome[13] = review_outcome.get(13, 0)
 
-# Calculate accuracy
-review_outcome['accuracy'] = review_outcome[13] / (review_outcome[12] + review_outcome[13])
+# Compute accuracy and total
+review_outcome['accuracy'] = review_outcome[12] / (review_outcome[12] + review_outcome[13])
+review_outcome['total'] = (review_outcome[12] + review_outcome[13]).mask(lambda x: x == 0)  # If 0, replace with Nan
 
-# Format output
-accuracy_table = review_outcome['accuracy'].unstack(fill_value=0)
+# Build interleaved list: accuracy col followed by total col for each label
+ordered_cols = []
+for label in labels:
+    ordered_cols.append(label)
+    ordered_cols.append(f"{label} TOTAL")
+
+# Prepare accuracy and total tables
+accuracy = review_outcome['accuracy'].unstack(fill_value=0) * 100
+total = review_outcome['total'].unstack().astype('Int64')  # keep NA intact
+accuracy = accuracy.mask(total.isna())
+
+# Combine and reorder columns
+accuracy_table = pd.concat([accuracy, total.add_suffix(' TOTAL')], axis=1)
+accuracy_table = accuracy_table.reindex(columns=ordered_cols)
 accuracy_table.index.name = 'user_email'
 accuracy_table.columns.name = None
-accuracy_table = accuracy_table.round(3)
 
 today = date.today().isoformat()
 accuracy_table.to_csv(f"annotator_accuracy_{today}.csv")
