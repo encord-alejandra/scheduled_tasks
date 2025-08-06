@@ -113,6 +113,7 @@ accuracy_table = pd.concat([accuracy, total.add_suffix(' TOTAL')], axis=1)
 accuracy_table = accuracy_table.reindex(columns=ordered_cols)
 accuracy_table.index.name = 'user_email'
 accuracy_table.columns.name = None
+accuracy_table = accuracy_table.round(2)
 
 today = date.today().isoformat()
 accuracy_table.to_csv(f"annotator_accuracy_{today}.csv")
