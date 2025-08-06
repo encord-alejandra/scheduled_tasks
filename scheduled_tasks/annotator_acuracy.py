@@ -1,3 +1,17 @@
+"""
+This script extracts the label logs for a project and calculates label rejection rates per annotator.
+
+Rajection rate = Rejections / ( Approvals + Rejections )
+
+Documentation on label logs:
+https://docs.encord.com/sdk-documentation/sdk-labels/sdk-activity-logs#log-actions
+
+Label Actions:
+* 12: Approve a label
+* 13: Reject a label
+* 28: Submit an object or a classification label for review
+"""
+
 from encord import EncordUserClient
 import datetime
 import pandas as pd
@@ -5,20 +19,8 @@ from datetime import date
 
 # Constants
 SSH_PATH = "secrets/encord-alejandra-accelerate-private-key.ed25519"
-# PROJECT_ID = "85317f8b-dc97-4866-9bdd-2ccc0dc9285f"  # Yutori [TEST]
 PROJECT_ID = "fb5c3af6-f023-4f70-87da-29bc7d4ac658"  # Yutori - Aug 11 Delivery
-
-# Log actions reference:
-# 3: Start labeling
-# 4: End labeling
-# 13: Reject a label
-# 29: Submit an attribute for review
-# 28: Submit an object or a classification label for review
-# 31: A bitrate warning was shown
-# 12: Approve a label
-# 11: Submit a task
-# 30: Buffering icon appeared
-# 33: Approve a task
+# PROJECT_ID = "85317f8b-dc97-4866-9bdd-2ccc0dc9285f"  # Yutori [TEST]
 
 class LabelLog:
     def __init__(self, log_line):
@@ -37,73 +39,42 @@ class LabelLog:
     def to_dict(self):
         return self.__dict__
 
-# Initialize client
-user_client = EncordUserClient.create_with_ssh_private_key(
-    ssh_private_key_path=SSH_PATH
-)
-
+# Fetch label logs
+user_client = EncordUserClient.create_with_ssh_private_key(ssh_private_key_path=SSH_PATH)
 project = user_client.get_project(PROJECT_ID)
 
-# Fetch label logs from the last week
-label_logs = project.get_label_logs(
-    after=datetime.datetime.now() - datetime.timedelta(weeks=1)
-)
-
-# Convert logs to DataFrame
-log_objects = [LabelLog(log_line) for log_line in label_logs]
+label_logs = project.get_label_logs(after=datetime.datetime.now() - datetime.timedelta(weeks=1))
+log_objects = [LabelLog(log) for log in label_logs]
 all_labels = pd.DataFrame([log.to_dict() for log in log_objects])
 
-# Filter logs by action type
-rejections = all_labels[all_labels['action'] == 13]
-submissions = all_labels[all_labels['action'] == 28]
+# Filter by action type
+reviews = all_labels[all_labels['action'].isin([12, 13])]
+annotations = all_labels[all_labels['action'] == 28]
 
-# Count submissions per user and task type
-submitted_counts = (
-    submissions
-    .groupby(['user_email', 'label_name'])
-    .size()
-    .reset_index(name='submitted')
+# Find the latest submission per annotation id and label name
+annotations = (
+    annotations
+    .sort_values('created_at')
+    .drop_duplicates(subset=['identifier', 'label_name'], keep='last')
+    .rename(columns={'user_email': 'annotator'})[['identifier', 'label_name', 'annotator']]
 )
 
-# Match rejections with corresponding submissions
-merged = pd.merge(
-    rejections,
-    submissions,
-    on='identifier',
-    suffixes=('_rejection', '_submission')
-)
+# Merge annotations with reviews
+df = reviews.merge(annotations, on=['identifier', 'label_name'], how='inner')
 
-# Keep only submissions before the rejection
-merged_timed = merged[merged['created_at_submission'] < merged['created_at_rejection']]
+# Counts approvals and rejections
+review_outcome = df.groupby(['annotator', 'label_name', 'action']).size().unstack(fill_value=0)
+review_outcome[12] = review_outcome.get(12, 0)
+review_outcome[13] = review_outcome.get(13, 0)
 
-# Get latest submission before each rejection
-merged_timed_ordered = (
-    merged_timed
-    .sort_values('created_at_submission')
-    .groupby(['identifier', 'created_at_rejection'])
-    .tail(1)
-)
+# Calculate accuracy
+review_outcome['accuracy'] = review_outcome[13] / (review_outcome[12] + review_outcome[13])
 
-# Count rejections per user and task type
-rejected_counts = (
-    merged_timed_ordered
-    .groupby(['user_email_submission', 'label_name_submission'])
-    .size()
-    .reset_index(name='rejected')
-    .rename(columns={
-        'user_email_submission': 'user_email',
-        'label_name_submission': 'label_name'
-    })
-)
+# Format output
+accuracy_table = review_outcome['accuracy'].unstack(fill_value=0)
+accuracy_table.index.name = 'user_email'
+accuracy_table.columns.name = None
+accuracy_table = accuracy_table.round(3)
 
-# Merge with submission counts and calculate rejection rates
-stats = pd.merge(submitted_counts, rejected_counts, on=['user_email', 'label_name'], how='left')
-stats['rejected'] = stats['rejected'].fillna(0)
-stats['rejection_rate'] = stats['rejected'] / stats['submitted']
-
-# Pivot result to have rejection rates per annotator and task type
-result = stats.pivot(index='user_email', columns='label_name', values='rejection_rate')
-
-today = date.today().isoformat()  # Format: YYYY-MM-DD
-filename = f"annotator_accuracy_{today}.csv"
-result.to_csv(filename)
+today = date.today().isoformat()
+accuracy_table.to_csv(f"annotator_accuracy_{today}.csv")
