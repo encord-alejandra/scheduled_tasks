@@ -41,9 +41,15 @@ jobs:
           body: |
             Hi team,
 
-            Please find today's annotator accuracy report attached.
+            Attached is the latest Annotator Accuracy report. 
+            The statistics reflect all-time annotation performance for the project Yutori - Aug 11 Delivery "fb5c3af6-f023-4f70-87da-29bc7d4ac658"
+            
+            Accuracy is calculated as: 
+            Accuracy = # rejections / ( # approvals + # rejections )
 
             Best regards,
+            Alejandra 
+            
             Automated Reporting System
           to: ${{ secrets.REPORT_EMAIL }}
           from: ${{ secrets.FROM_EMAIL }}
