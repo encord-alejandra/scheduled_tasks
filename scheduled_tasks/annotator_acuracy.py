@@ -93,27 +93,20 @@ review_outcome = df.groupby(['annotator', 'label_name', 'action']).size().unstac
 review_outcome[12] = review_outcome.get(12, 0)
 review_outcome[13] = review_outcome.get(13, 0)
 
-# Compute accuracy and total
-review_outcome['accuracy'] = review_outcome[12] / (review_outcome[12] + review_outcome[13])
-review_outcome['total'] = (review_outcome[12] + review_outcome[13]).mask(lambda x: x == 0)  # If 0, replace with Nan
+# Calculate accuracy
+review_outcome['accuracy'] = review_outcome[13] / (review_outcome[12] + review_outcome[13])
 
 # Build interleaved list: accuracy col followed by total col for each label
 ordered_cols = []
 for label in labels:
     ordered_cols.append(label)
-    ordered_cols.append(f"{label} TOTAL")
 
-# Prepare accuracy and total tables
-accuracy = review_outcome['accuracy'].unstack(fill_value=0) * 100
-total = review_outcome['total'].unstack().astype('Int64')  # keep NA intact
-accuracy = accuracy.mask(total.isna())
-
-# Combine and reorder columns
-accuracy_table = pd.concat([accuracy, total.add_suffix(' TOTAL')], axis=1)
-accuracy_table = accuracy_table.reindex(columns=ordered_cols)
+# Format output
+accuracy_table = review_outcome['accuracy'].unstack(fill_value=0) *100
 accuracy_table.index.name = 'user_email'
 accuracy_table.columns.name = None
-accuracy_table = accuracy_table.round(2)
+accuracy_table = accuracy_table.round(3)
+accuracy_table = accuracy_table.reindex(columns=ordered_cols)
 
 today = date.today().isoformat()
 accuracy_table.to_csv(f"annotator_accuracy_{today}.csv")

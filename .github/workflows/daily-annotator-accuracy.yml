@@ -2,7 +2,7 @@ name: Daily Annotator Report
 
 on:
   schedule:
-    - cron: '0 7 * * *'
+    - cron: '30 16 * * *'  # 5:30 PM London time (during DST)
   workflow_dispatch:
 
 jobs:
@@ -48,7 +48,7 @@ jobs:
             The statistics reflect all-time annotation performance for the project Yutori - Aug 11 Delivery "fb5c3af6-f023-4f70-87da-29bc7d4ac658"
             
             Accuracy is calculated as: 
-            Accuracy = # approvals / ( # approvals + # rejections )
+            Rejection rate = # rejections / ( # approvals + # rejections )
 
             Best regards,
             Alejandra 
