@@ -15,7 +15,7 @@ import datetime
 import pandas as pd
 from datetime import date
 
-SSH_PATH = "../secrets/encord-alejandra-accelerate-private-key.ed25519"
+SSH_PATH = "secrets/encord-alejandra-accelerate-private-key.ed25519"
 PROJECT_ID = "fb5c3af6-f023-4f70-87da-29bc7d4ac658"  # Yutori - Aug 11 Delivery
 
 # Connect to project
