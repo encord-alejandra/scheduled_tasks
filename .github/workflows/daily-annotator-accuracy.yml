@@ -30,8 +30,11 @@ jobs:
           echo "${{ secrets.ENCORD_PRIVATE_KEY_B64 }}" | base64 -d > secrets/encord-alejandra-accelerate-private-key.ed25519
           chmod 600 secrets/encord-alejandra-accelerate-private-key.ed25519
 
-      - name: Run script
+      - name: Run accuracy script
         run: python scheduled_tasks/annotator_acuracy.py
+
+      - name: Run task review script
+        run: python scheduled_tasks/task_outcome_per_annotator.py
 
       - name: Send email with CSV
         uses: dawidd6/action-send-mail@v3
@@ -40,16 +43,20 @@ jobs:
           server_port: 465
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "Annotator Accuracy Report - ${{ env.CURRENT_DAY }}"
+          subject: "Yutori Report - ${{ env.CURRENT_DAY }}"
           body: |
             Hi team,
 
-            Attached is the latest Annotator Accuracy report. 
+            Attached are two files:
+            1. The latest Annotator Accuracy report. 
+            
             The statistics reflect all-time annotation performance for the project Yutori - Aug 11 Delivery "fb5c3af6-f023-4f70-87da-29bc7d4ac658"
             
             Accuracy is calculated as: 
             Rejection rate = # rejections / ( # approvals + # rejections )
-
+            
+            2. Task Review Summary – Approved/rejected tasks per annotator, including the reviewer for each decision.            
+            
             Best regards,
             Alejandra 
             

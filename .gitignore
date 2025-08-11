@@ -12,4 +12,4 @@ PyCharmMiscProject.iml
 yutori/
 scripts
 billing
-scheduled_tasks/annotator_accuracy_*.csv
+scheduled_tasks/*.csv
