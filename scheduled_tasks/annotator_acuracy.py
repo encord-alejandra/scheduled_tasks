@@ -21,6 +21,7 @@ from datetime import date
 SSH_PATH = "secrets/encord-alejandra-accelerate-private-key.ed25519"
 PROJECT_ID = "fb5c3af6-f023-4f70-87da-29bc7d4ac658"  # Yutori - Aug 11 Delivery
 # PROJECT_ID = "85317f8b-dc97-4866-9bdd-2ccc0dc9285f"  # Yutori [TEST]
+# PROJECT_ID = "ca2111d8-c641-4f89-8a48-4184b4a88328"  # Yutori - Aug 18 Delivery
 
 class LabelLog:
     def __init__(self, log_line):
@@ -69,7 +70,7 @@ labels = [
 user_client = EncordUserClient.create_with_ssh_private_key(ssh_private_key_path=SSH_PATH)
 project = user_client.get_project(PROJECT_ID)
 
-label_logs = project.get_label_logs(after=datetime.datetime.now() - datetime.timedelta(weeks=1))
+label_logs = project.get_label_logs(after=datetime.datetime.now() - datetime.timedelta(weeks=2))
 log_objects = [LabelLog(log) for log in label_logs]
 all_labels = pd.DataFrame([log.to_dict() for log in log_objects])
 
@@ -94,19 +95,28 @@ review_outcome[12] = review_outcome.get(12, 0)
 review_outcome[13] = review_outcome.get(13, 0)
 
 # Calculate accuracy
-review_outcome['accuracy'] = review_outcome[13] / (review_outcome[12] + review_outcome[13])
+# Compute accuracy and total
+review_outcome['rejection_rate'] = review_outcome[13] / (review_outcome[12] + review_outcome[13])
+review_outcome['total'] = (review_outcome[12] + review_outcome[13]).mask(lambda x: x == "")  # If 0, replace with empty string
 
 # Build interleaved list: accuracy col followed by total col for each label
 ordered_cols = []
 for label in labels:
-    ordered_cols.append(label)
+    ordered_cols.append(f"{label}")
+    ordered_cols.append(f"{label} total tasks")
+
+# Prepare accuracy and total tables
+accuracy = review_outcome['rejection_rate'].unstack(fill_value=0) * 100
+total = review_outcome['total'].unstack().astype('Int64')  # keep NA intact
+accuracy = accuracy.mask(total.isna())
+
 
 # Format output
-accuracy_table = review_outcome['accuracy'].unstack(fill_value=0) *100
+accuracy_table = pd.concat([accuracy, total.add_suffix(' total tasks')], axis=1)
+accuracy_table = accuracy_table.reindex(columns=ordered_cols)
 accuracy_table.index.name = 'user_email'
 accuracy_table.columns.name = None
 accuracy_table = accuracy_table.round(3)
-accuracy_table = accuracy_table.reindex(columns=ordered_cols)
 
 today = date.today().isoformat()
 accuracy_table.to_csv(f"annotator_accuracy_{today}.csv")

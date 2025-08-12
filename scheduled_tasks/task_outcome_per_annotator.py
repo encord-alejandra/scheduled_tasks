@@ -17,6 +17,7 @@ from datetime import date
 
 SSH_PATH = "secrets/encord-alejandra-accelerate-private-key.ed25519"
 PROJECT_ID = "fb5c3af6-f023-4f70-87da-29bc7d4ac658"  # Yutori - Aug 11 Delivery
+# PROJECT_ID = "ca2111d8-c641-4f89-8a48-4184b4a88328"  # Yutori - Aug 18 Delivery
 
 # Connect to project
 user_client = EncordUserClient.create_with_ssh_private_key(
@@ -55,7 +56,7 @@ df = df.sort_values("created_at")
 
 # Separate submit and review logs
 submits = df[df["action"] == 11].copy()
-reviews = df[df["action"].isin([33, 34])].copy()
+reviews = df[df["action"].isin([34])].copy()
 
 submits = submits.rename(columns={"created_at": "submitted_at"})
 reviews = reviews.rename(columns={"created_at": "reviewed_at"})
