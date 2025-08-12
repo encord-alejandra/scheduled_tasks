@@ -46,7 +46,7 @@ class LabelLog:
 
 # Fetch logs from last 7 days
 label_logs = project.get_label_logs(
-    after=datetime.datetime.now() - datetime.timedelta(weeks=1)
+    after=datetime.datetime.now() - datetime.timedelta(weeks=2)
 )
 log_objects = [LabelLog(log) for log in label_logs]
 df = pd.DataFrame([log.to_dict() for log in log_objects])
