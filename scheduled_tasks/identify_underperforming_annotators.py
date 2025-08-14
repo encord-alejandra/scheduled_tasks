@@ -1,10 +1,9 @@
 from encord import EncordUserClient
 import datetime
 import pandas as pd
-from datetime import date
 import json
+from datetime import date
 
-# Config
 SSH_PATH = "secrets/encord-alejandra-accelerate-private-key.ed25519"
 PROJECT_ID = "ca2111d8-c641-4f89-8a48-4184b4a88328"
 
@@ -62,6 +61,16 @@ for short_name, full_label in target_labels.items():
     results[short_name] = worst_five
 
 slack_blocks = []
+today = date.today().isoformat()
+
+# Header block
+slack_blocks.append({
+    "type": "section",
+    "text": {
+        "type": "mrkdwn",
+        "text": f"*Daily Quality Review*\nDate: {today}\nProject: YUTORI ({PROJECT_ID})"
+    }
+})
 for label, table in results.items():
     slack_blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": f"*{label}*"}})
     for _, row in table.iterrows():
@@ -69,7 +78,7 @@ for label, table in results.items():
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"- {row['annotator']} | Review rate: {row['rejection_rate']:.1%}"
+                "text": f"- {row['annotator']} | Rejection rate: {row['rejection_rate']:.1%}"
             }
         })
     slack_blocks.append({"type": "divider"})
