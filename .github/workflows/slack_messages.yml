@@ -2,6 +2,8 @@ name: Post Daily Quality Review to Slack
 on:
   schedule:
     - cron: '30 16 * * *'  # 5:30 PM London time (during DST)
+  workflow_dispatch:     # Allows manual runs from the GitHub UI
+
 jobs:
   run:
     runs-on: ubuntu-latest
