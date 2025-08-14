@@ -5,7 +5,7 @@ from datetime import date
 import json
 
 # Config
-SSH_PATH = "../secrets/encord-alejandra-accelerate-private-key.ed25519"
+SSH_PATH = "secrets/encord-alejandra-accelerate-private-key.ed25519"
 PROJECT_ID = "ca2111d8-c641-4f89-8a48-4184b4a88328"
 
 # Labels of interest
