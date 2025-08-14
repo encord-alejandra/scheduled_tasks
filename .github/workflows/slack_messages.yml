@@ -26,7 +26,7 @@ jobs:
           chmod 600 secrets/encord-alejandra-accelerate-private-key.ed25519
 
       - name: Run accuracy script
-        run: python scheduled_tasks/identify_underperforming_annotators.py
+        run: python identify_underperforming_annotators.py
 
       - name: Generate daily quality report
         id: script
