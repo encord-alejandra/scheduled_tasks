@@ -25,13 +25,10 @@ jobs:
           echo "${{ secrets.ENCORD_PRIVATE_KEY_B64 }}" | base64 -d > secrets/encord-alejandra-accelerate-private-key.ed25519
           chmod 600 secrets/encord-alejandra-accelerate-private-key.ed25519
 
-      - name: Run accuracy script
-        run: python identify_underperforming_annotators.py
-
       - name: Generate daily quality report
         id: script
         run: |
-          OUTPUT=$(python identify_underperforming_annotators.py)
+          OUTPUT=$(python scheduled_tasks/identify_underperforming_annotators.py)
           echo "payload=$OUTPUT" >> $GITHUB_OUTPUT
 
       - name: Send quality report to Slack
