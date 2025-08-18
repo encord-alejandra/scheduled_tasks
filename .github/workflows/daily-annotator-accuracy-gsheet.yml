@@ -12,7 +12,6 @@ jobs:
 
       - name: Set current date
         run: |
-          echo "CURRENT_DAY=$(date '+%A, %d %B %Y')" >> $GITHUB_ENV
           echo "SHEET_DATE=$(date '+%Y-%m-%d')" >> $GITHUB_ENV
 
       - name: Set up Python
@@ -35,11 +34,14 @@ jobs:
       - name: Run task review script
         run: python scheduled_tasks/task_outcome_per_annotator.py
 
+      - name: List generated files (for debugging)
+        run: ls -la *.csv || echo "No CSV files found"
+
       - name: Read CSV data
         id: read_csv
         run: |
-          # Read the CSV file with today's date in the filename
-          CSV_DATA=$(python -c "
+          # Read the accuracy CSV file
+          ACCURACY_DATA=$(python -c "
           import csv
           import json
           try:
@@ -50,7 +52,21 @@ jobs:
           except FileNotFoundError:
               print('[]')
           ")
-          echo "csv_data=$CSV_DATA" >> $GITHUB_OUTPUT
+          echo "accuracy_data=$ACCURACY_DATA" >> $GITHUB_OUTPUT
+          
+          # Read the task outcome CSV file
+          TASK_DATA=$(python -c "
+          import csv
+          import json
+          try:
+              with open('task_outcome_${{ env.SHEET_DATE }}.csv', 'r') as f:
+                  reader = csv.reader(f)
+                  data = list(reader)
+              print(json.dumps(data))
+          except FileNotFoundError:
+              print('[]')
+          ")
+          echo "task_data=$TASK_DATA" >> $GITHUB_OUTPUT
 
       - name: Update Google Sheet
         id: 'update_worksheet'
@@ -62,21 +78,28 @@ jobs:
               { 
                 "command": "addWorksheet", 
                 "args": { 
-                  "worksheetTitle": "Report_${{ env.SHEET_DATE }}" 
+                  "worksheetTitle": "accuracy_${{ env.SHEET_DATE }}" 
                 }
               },
               { 
                 "command": "updateData", 
                 "args": { 
-                  "worksheetTitle": "Report_${{ env.SHEET_DATE }}",
-                  "data": ${{ steps.read_csv.outputs.csv_data }}
+                  "worksheetTitle": "accuracy_${{ env.SHEET_DATE }}",
+                  "data": ${{ steps.read_csv.outputs.accuracy_data }}
                 }
               },
               { 
-                "command": "getData", 
+                "command": "addWorksheet", 
                 "args": { 
-                  "range": "'Report_${{ env.SHEET_DATE }}'!A1:C3" 
-                } 
+                  "worksheetTitle": "task_outcome_${{ env.SHEET_DATE }}" 
+                }
+              },
+              { 
+                "command": "updateData", 
+                "args": { 
+                  "worksheetTitle": "task_outcome_${{ env.SHEET_DATE }}",
+                  "data": ${{ steps.read_csv.outputs.task_data }}
+                }
               }
             ]
         env:
