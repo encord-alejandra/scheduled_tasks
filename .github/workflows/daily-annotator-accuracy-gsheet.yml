@@ -1,4 +1,4 @@
-name: Daily Annotator Report with Google Sheets
+name: Daily Annotator Report on Google Sheet
 on:
   schedule:
     - cron: '30 16 * * *'  # 5:30 PM London time (during DST)
@@ -110,3 +110,34 @@ jobs:
         env:
           RESULTS: ${{ steps.update_worksheet.outputs.results }}
         run: echo "$RESULTS" | jq
+
+      - name: Send update to Slack
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "📊 *Date:* ${{ env.CURRENT_DAY }}\n\nThe latest accuracy metrics have been updated."
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Report in Google Sheets"
+                      },
+                      "url": "https://docs.google.com/spreadsheets/d/1X99N34HNxrfEdC5vhiQUYNzr8lB2Jcz7hp74PbLRAII/edit?usp=sharing"
+                    }
+                  ]
+                }
+              ]
+            }
