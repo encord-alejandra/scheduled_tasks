@@ -1,0 +1,89 @@
+name: Daily Annotator Report with Google Sheets
+on:
+  schedule:
+    - cron: '30 16 * * *'  # 5:30 PM London time (during DST)
+  workflow_dispatch:
+jobs:
+  send-report-and-update-sheet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set current date
+        run: |
+          echo "CURRENT_DAY=$(date '+%A, %d %B %Y')" >> $GITHUB_ENV
+          echo "SHEET_DATE=$(date '+%Y-%m-%d')" >> $GITHUB_ENV
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Decode and write SSH private key
+        run: |
+          mkdir -p secrets
+          echo "${{ secrets.ENCORD_PRIVATE_KEY_B64 }}" | base64 -d > secrets/encord-alejandra-accelerate-private-key.ed25519
+          chmod 600 secrets/encord-alejandra-accelerate-private-key.ed25519
+
+      - name: Run accuracy script
+        run: python scheduled_tasks/annotator_acuracy.py
+
+      - name: Run task review script
+        run: python scheduled_tasks/task_outcome_per_annotator.py
+
+      - name: Read CSV data
+        id: read_csv
+        run: |
+          # Read the CSV file with today's date in the filename
+          CSV_DATA=$(python -c "
+          import csv
+          import json
+          try:
+              with open('annotator_accuracy_${{ env.SHEET_DATE }}.csv', 'r') as f:
+                  reader = csv.reader(f)
+                  data = list(reader)
+              print(json.dumps(data))
+          except FileNotFoundError:
+              print('[]')
+          ")
+          echo "csv_data=$CSV_DATA" >> $GITHUB_OUTPUT
+
+      - name: Update Google Sheet
+        id: 'update_worksheet'
+        uses: jroehl/gsheet.action@v2.0.0
+        with:
+          spreadsheetId: '1X99N34HNxrfEdC5vhiQUYNzr8lB2Jcz7hp74PbLRAII'
+          commands: | # list of commands, specified as a valid JSON string
+            [
+              { 
+                "command": "addWorksheet", 
+                "args": { 
+                  "worksheetTitle": "Report_${{ env.SHEET_DATE }}" 
+                }
+              },
+              { 
+                "command": "updateData", 
+                "args": { 
+                  "worksheetTitle": "Report_${{ env.SHEET_DATE }}",
+                  "data": ${{ steps.read_csv.outputs.csv_data }}
+                }
+              },
+              { 
+                "command": "getData", 
+                "args": { 
+                  "range": "'Report_${{ env.SHEET_DATE }}'!A1:C3" 
+                } 
+              }
+            ]
+        env:
+          GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
+          GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
+
+      - name: Dump results
+        env:
+          RESULTS: ${{ steps.update_worksheet.outputs.results }}
+        run: echo "$RESULTS" | jq
