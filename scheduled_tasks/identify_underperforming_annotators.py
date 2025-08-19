@@ -4,7 +4,7 @@ import pandas as pd
 import json
 from datetime import date
 
-SSH_PATH = "secrets/encord-alejandra-accelerate-private-key.ed25519"
+SSH_PATH = "../secrets/encord-alejandra-accelerate-private-key.ed25519"
 PROJECT_ID = "ca2111d8-c641-4f89-8a48-4184b4a88328"
 
 # Labels of interest
@@ -45,6 +45,7 @@ counts = merged.groupby(['annotator', 'label_name', 'action']).size().unstack(fi
 counts[APPROVE] = counts.get(APPROVE, 0)
 counts[REJECT] = counts.get(REJECT, 0)
 counts['rejection_rate'] = counts[REJECT] / (counts[APPROVE] + counts[REJECT])
+counts['submissions'] = counts[REJECT] + counts[APPROVE]
 
 # Filter for target labels
 counts = counts.reset_index()
@@ -55,7 +56,7 @@ for short_name, full_label in target_labels.items():
     label_data = label_data[label_data['rejection_rate'] > 0]
     worst_five = (
         label_data.sort_values('rejection_rate', ascending=False)
-        .head(5)[['annotator', 'rejection_rate']]
+        .head(5)[['annotator', 'rejection_rate', 'submissions']]
         .round(3)
     )
     results[short_name] = worst_five
@@ -74,11 +75,13 @@ slack_blocks.append({
 for label, table in results.items():
     slack_blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": f"*{label}*"}})
     for _, row in table.iterrows():
+        if row['submissions'] <2:
+            continue
         slack_blocks.append({
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"- {row['annotator']} | Rejection rate: {row['rejection_rate']:.1%}"
+                "text": f"- {row['annotator']} | Rejection rate: {row['rejection_rate']:.1%} | Labels submitted: {row['submissions']}"
             }
         })
     slack_blocks.append({"type": "divider"})
