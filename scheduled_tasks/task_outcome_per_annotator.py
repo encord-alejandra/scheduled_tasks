@@ -17,7 +17,8 @@ from datetime import date
 
 SSH_PATH = "secrets/encord-alejandra-accelerate-private-key.ed25519"
 # PROJECT_ID = "fb5c3af6-f023-4f70-87da-29bc7d4ac658"  # Yutori - Aug 11 Delivery
-PROJECT_ID = "ca2111d8-c641-4f89-8a48-4184b4a88328"  # Yutori - Aug 18 Delivery
+# PROJECT_ID = "ca2111d8-c641-4f89-8a48-4184b4a88328"  # Yutori - Aug 18 Delivery
+PROJECT_ID = "1551a512-11d4-4051-bb0c-27d893bda57b"  # Yutori - Aug 25 delivery
 
 # Connect to project
 user_client = EncordUserClient.create_with_ssh_private_key(

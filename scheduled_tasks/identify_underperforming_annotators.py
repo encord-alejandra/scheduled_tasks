@@ -4,8 +4,8 @@ import pandas as pd
 import json
 from datetime import date
 
-SSH_PATH = "../secrets/encord-alejandra-accelerate-private-key.ed25519"
-PROJECT_ID = "ca2111d8-c641-4f89-8a48-4184b4a88328"
+SSH_PATH = "secrets/encord-alejandra-accelerate-private-key.ed25519"
+PROJECT_ID = "1551a512-11d4-4051-bb0c-27d893bda57b"  # Aug 25 delivery
 
 # Labels of interest
 target_labels = {
