@@ -5,7 +5,8 @@ import json
 from datetime import date
 
 SSH_PATH = "secrets/encord-alejandra-accelerate-private-key.ed25519"
-PROJECT_ID = "1551a512-11d4-4051-bb0c-27d893bda57b"  # Aug 25 delivery
+# PROJECT_ID = "1551a512-11d4-4051-bb0c-27d893bda57b"  # Aug 25 delivery
+PROJECT_ID = "cd5007d9-3195-4034-a7dc-f849fcd0c9d3"    # Yutori - Sep 8 Delivery
 
 # Labels of interest
 target_labels = {

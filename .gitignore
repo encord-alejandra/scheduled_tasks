@@ -14,3 +14,4 @@ yutori/
 scripts
 billing
 scheduled_tasks/*.csv
+agents/*
