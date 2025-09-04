@@ -1,7 +1,7 @@
 name: Daily Annotator Report on Google Sheet
 on:
-  schedule:
-    - cron: '30 16 * * *'  # 5:30 PM London time (during DST)
+#  schedule:
+#    - cron: '30 16 * * *'  # 5:30 PM London time (during DST)
   workflow_dispatch:
 jobs:
   send-report-and-update-sheet:
